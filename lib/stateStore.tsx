@@ -64,7 +64,7 @@ interface KingNMSContextType {
   changeInterfaceVlan: (deviceId: string, interfaceId: string, newVlan: number) => void;
   executePing: (ip: string) => Promise<{ success: boolean; latencyMs: number; details: string; packetLoss: number }>;
   executeTraceroute: (target: string) => Promise<{ success: boolean; totalHops: number; hops: any[] }>;
-  startNetworkDiscovery: (subnet?: string, snmpCommunity?: string) => Promise<void>;
+  startNetworkDiscovery: (subnet?: string, snmpCommunity?: string) => Promise<any>;
   authorizeNewDevice: (id: string, customData?: Partial<Device>) => Promise<void>;
   blockNewDevice: (id: string, reason?: string) => Promise<void>;
   ignoreNewDevice: (id: string) => Promise<void>;
@@ -510,6 +510,7 @@ export function KingNMSProvider({ children }: { children: ReactNode }) {
           const devData = await devRes.json();
           setDevices(devData.devices);
         }
+        return data;
       }
     } finally {
       setIsScanning(false);

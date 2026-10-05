@@ -19,9 +19,9 @@
       "snmpCommunity": "public",
       "isBlocked": false,
       "firstSeen": "2026-10-05 00:19:32",
-      "lastSeen": "2026-10-05 00:23:52",
+      "lastSeen": "2026-10-05 00:29:40",
       "metrics": {
-        "latencyMs": 1.38,
+        "latencyMs": 1.42,
         "minLatencyMs": 1.2,
         "maxLatencyMs": 2.5,
         "packetLossPct": 0,
@@ -30,19 +30,19 @@
         "ramUsedMb": 512,
         "ramTotalMb": 1024,
         "ramPct": 50,
-        "uptimeSeconds": 864090,
+        "uptimeSeconds": 864380,
         "availabilityPct": 99.98,
         "historyLatency": [
-          1.4,
-          1.35,
+          1.47,
+          1.41,
+          2.17,
+          1.57,
+          3.21,
+          2.86,
+          1.5,
+          1.46,
           1.49,
-          1.39,
-          1.37,
-          1.24,
-          2.38,
-          1.42,
-          1.33,
-          1.38
+          1.42
         ],
         "historyCpu": [
           22,
@@ -126,9 +126,9 @@
       "snmpCommunity": "public",
       "isBlocked": false,
       "firstSeen": "2026-10-05 00:19:32",
-      "lastSeen": "2026-10-05 00:23:52",
+      "lastSeen": "2026-10-05 00:29:40",
       "metrics": {
-        "latencyMs": 0.028,
+        "latencyMs": 0.031,
         "minLatencyMs": 0.1,
         "maxLatencyMs": 0.2,
         "packetLossPct": 0,
@@ -137,19 +137,19 @@
         "ramUsedMb": 6144,
         "ramTotalMb": 16384,
         "ramPct": 37.5,
-        "uptimeSeconds": 51660,
+        "uptimeSeconds": 51950,
         "availabilityPct": 100,
         "historyLatency": [
-          0.1,
-          0.06,
+          0.069,
+          0.061,
+          0.027,
           0.033,
-          0.034,
-          0.026,
-          0.04,
-          0.03,
+          0.023,
           0.028,
           0.032,
-          0.028
+          0.033,
+          0.036,
+          0.031
         ],
         "historyCpu": [
           15,
@@ -217,7 +217,7 @@
       "snmpCommunity": "king_public_ro",
       "isBlocked": false,
       "firstSeen": "2026-01-15 08:00:00",
-      "lastSeen": "2026-10-05 00:23:52",
+      "lastSeen": "2026-10-05 00:29:40",
       "metrics": {
         "latencyMs": 0,
         "minLatencyMs": 0.9,
@@ -231,7 +231,7 @@
         "uptimeSeconds": 3628800,
         "availabilityPct": 99.99,
         "historyLatency": [
-          1.2,
+          0,
           0,
           0,
           0,
@@ -344,7 +344,7 @@
       "snmpCommunity": "king_public_ro",
       "isBlocked": false,
       "firstSeen": "2026-01-15 08:00:00",
-      "lastSeen": "2026-10-05 00:23:52",
+      "lastSeen": "2026-10-05 00:29:40",
       "metrics": {
         "latencyMs": 0,
         "minLatencyMs": 1.1,
@@ -358,7 +358,7 @@
         "uptimeSeconds": 3628800,
         "availabilityPct": 99.98,
         "historyLatency": [
-          1.5,
+          0,
           0,
           0,
           0,
@@ -543,7 +543,7 @@
       "snmpCommunity": "king_public_ro",
       "isBlocked": false,
       "firstSeen": "2026-01-20 10:15:00",
-      "lastSeen": "2026-10-05 00:23:52",
+      "lastSeen": "2026-10-05 00:29:40",
       "metrics": {
         "latencyMs": 0,
         "minLatencyMs": 1.8,
@@ -557,7 +557,7 @@
         "uptimeSeconds": 2592000,
         "availabilityPct": 99.95,
         "historyLatency": [
-          2.1,
+          0,
           0,
           0,
           0,
@@ -688,7 +688,7 @@
       "snmpCommunity": "sec_king_v3",
       "isBlocked": false,
       "firstSeen": "2026-02-01 12:00:00",
-      "lastSeen": "2026-10-05 00:23:52",
+      "lastSeen": "2026-10-05 00:29:40",
       "metrics": {
         "latencyMs": 0,
         "minLatencyMs": 1.5,
@@ -702,7 +702,7 @@
         "uptimeSeconds": 4320000,
         "availabilityPct": 99.98,
         "historyLatency": [
-          1.8,
+          0,
           0,
           0,
           0,
@@ -797,7 +797,7 @@
       "snmpCommunity": "king_public_ro",
       "isBlocked": false,
       "firstSeen": "2026-02-01 12:00:00",
-      "lastSeen": "2026-10-05 00:23:52",
+      "lastSeen": "2026-10-05 00:29:40",
       "metrics": {
         "latencyMs": 0,
         "minLatencyMs": 1.2,
@@ -811,7 +811,7 @@
         "uptimeSeconds": 5184000,
         "availabilityPct": 99.99,
         "historyLatency": [
-          1.4,
+          0,
           0,
           0,
           0,
@@ -888,7 +888,7 @@
       "snmpCommunity": "king_public_ro",
       "isBlocked": false,
       "firstSeen": "2026-03-10 09:00:00",
-      "lastSeen": "2026-10-05 00:23:52",
+      "lastSeen": "2026-10-05 00:29:40",
       "metrics": {
         "latencyMs": 0,
         "minLatencyMs": 1.9,
@@ -902,7 +902,7 @@
         "uptimeSeconds": 2160000,
         "availabilityPct": 99.94,
         "historyLatency": [
-          2.4,
+          0,
           0,
           0,
           0,
@@ -979,7 +979,7 @@
       "snmpCommunity": "public",
       "isBlocked": false,
       "firstSeen": "2026-05-12 14:00:00",
-      "lastSeen": "2026-10-05 00:23:52",
+      "lastSeen": "2026-10-05 00:29:40",
       "metrics": {
         "latencyMs": 0,
         "minLatencyMs": 0,
@@ -1070,7 +1070,7 @@
       "snmpCommunity": "public",
       "isBlocked": false,
       "firstSeen": "2026-02-10 11:00:00",
-      "lastSeen": "2026-10-05 00:23:52",
+      "lastSeen": "2026-10-05 00:29:40",
       "metrics": {
         "latencyMs": 0,
         "minLatencyMs": 2.9,
@@ -1084,7 +1084,7 @@
         "uptimeSeconds": 1814400,
         "availabilityPct": 99.96,
         "historyLatency": [
-          3.8,
+          0,
           0,
           0,
           0,
@@ -1161,7 +1161,7 @@
       "snmpCommunity": "public",
       "isBlocked": false,
       "firstSeen": "2026-03-01 08:30:00",
-      "lastSeen": "2026-10-05 00:23:52",
+      "lastSeen": "2026-10-05 00:29:40",
       "metrics": {
         "latencyMs": 0,
         "minLatencyMs": 3.1,
@@ -1175,7 +1175,7 @@
         "uptimeSeconds": 1209600,
         "availabilityPct": 99.92,
         "historyLatency": [
-          4.2,
+          0,
           0,
           0,
           0,
@@ -1252,7 +1252,7 @@
       "snmpCommunity": "public",
       "isBlocked": false,
       "firstSeen": "2026-02-15 09:00:00",
-      "lastSeen": "2026-10-05 00:23:52",
+      "lastSeen": "2026-10-05 00:29:40",
       "metrics": {
         "latencyMs": 0,
         "minLatencyMs": 2.1,
@@ -1266,7 +1266,7 @@
         "uptimeSeconds": 2419200,
         "availabilityPct": 99.98,
         "historyLatency": [
-          2.8,
+          0,
           0,
           0,
           0,
@@ -1343,7 +1343,7 @@
       "snmpCommunity": "public",
       "isBlocked": false,
       "firstSeen": "2026-02-18 10:00:00",
-      "lastSeen": "2026-10-05 00:23:52",
+      "lastSeen": "2026-10-05 00:29:40",
       "metrics": {
         "latencyMs": 0,
         "minLatencyMs": 2.8,
@@ -1357,7 +1357,7 @@
         "uptimeSeconds": 1555200,
         "availabilityPct": 99.88,
         "historyLatency": [
-          3.5,
+          0,
           0,
           0,
           0,
@@ -1434,7 +1434,7 @@
       "snmpCommunity": "public",
       "isBlocked": false,
       "firstSeen": "2026-01-20 08:30:00",
-      "lastSeen": "2026-10-05 00:23:52",
+      "lastSeen": "2026-10-05 00:29:40",
       "metrics": {
         "latencyMs": 0,
         "minLatencyMs": 1.2,
@@ -1448,7 +1448,7 @@
         "uptimeSeconds": 604800,
         "availabilityPct": 99.95,
         "historyLatency": [
-          1.6,
+          0,
           0,
           0,
           0,
@@ -1525,7 +1525,7 @@
       "snmpCommunity": "public",
       "isBlocked": false,
       "firstSeen": "2026-02-12 08:00:00",
-      "lastSeen": "2026-10-05 00:23:52",
+      "lastSeen": "2026-10-05 00:29:40",
       "metrics": {
         "latencyMs": 0,
         "minLatencyMs": 1.6,
@@ -1539,7 +1539,7 @@
         "uptimeSeconds": 432000,
         "availabilityPct": 99.91,
         "historyLatency": [
-          2,
+          0,
           0,
           0,
           0,
@@ -1616,7 +1616,7 @@
       "snmpCommunity": "public",
       "isBlocked": false,
       "firstSeen": "2026-01-10 12:00:00",
-      "lastSeen": "2026-10-05 00:23:52",
+      "lastSeen": "2026-10-05 00:29:40",
       "metrics": {
         "latencyMs": 0,
         "minLatencyMs": 2.5,
@@ -1630,7 +1630,7 @@
         "uptimeSeconds": 5184000,
         "availabilityPct": 99.99,
         "historyLatency": [
-          3.1,
+          0,
           0,
           0,
           0,
@@ -1707,7 +1707,7 @@
       "snmpCommunity": "public",
       "isBlocked": false,
       "firstSeen": "2026-02-05 09:00:00",
-      "lastSeen": "2026-10-05 00:23:52",
+      "lastSeen": "2026-10-05 00:29:40",
       "metrics": {
         "latencyMs": 0,
         "minLatencyMs": 7.1,
@@ -1721,7 +1721,7 @@
         "uptimeSeconds": 3110400,
         "availabilityPct": 99.92,
         "historyLatency": [
-          8.2,
+          0,
           0,
           0,
           0,
@@ -1816,7 +1816,7 @@
       "snmpCommunity": "public",
       "isBlocked": false,
       "firstSeen": "2026-02-05 09:00:00",
-      "lastSeen": "2026-10-05 00:23:52",
+      "lastSeen": "2026-10-05 00:29:40",
       "metrics": {
         "latencyMs": 0,
         "minLatencyMs": 7.5,
@@ -1830,7 +1830,7 @@
         "uptimeSeconds": 3110400,
         "availabilityPct": 99.91,
         "historyLatency": [
-          8.6,
+          0,
           0,
           0,
           0,
@@ -1907,7 +1907,7 @@
       "snmpCommunity": "public",
       "isBlocked": false,
       "firstSeen": "2026-02-10 10:00:00",
-      "lastSeen": "2026-10-05 00:23:52",
+      "lastSeen": "2026-10-05 00:29:40",
       "metrics": {
         "latencyMs": 0,
         "minLatencyMs": 8,
@@ -1921,7 +1921,7 @@
         "uptimeSeconds": 1555200,
         "availabilityPct": 99.85,
         "historyLatency": [
-          9.1,
+          0,
           0,
           0,
           0,
@@ -1998,7 +1998,7 @@
       "snmpCommunity": "public",
       "isBlocked": false,
       "firstSeen": "2026-03-01 10:00:00",
-      "lastSeen": "2026-10-05 00:23:52",
+      "lastSeen": "2026-10-05 00:29:40",
       "metrics": {
         "latencyMs": 0,
         "minLatencyMs": 19.5,
@@ -2012,7 +2012,7 @@
         "uptimeSeconds": 1296000,
         "availabilityPct": 99.78,
         "historyLatency": [
-          23.8,
+          0,
           0,
           0,
           0,
@@ -2089,7 +2089,7 @@
       "snmpCommunity": "public",
       "isBlocked": false,
       "firstSeen": "2026-03-01 10:00:00",
-      "lastSeen": "2026-10-05 00:23:52",
+      "lastSeen": "2026-10-05 00:29:40",
       "metrics": {
         "latencyMs": 0,
         "minLatencyMs": 21,
@@ -2103,7 +2103,7 @@
         "uptimeSeconds": 864000,
         "availabilityPct": 98.45,
         "historyLatency": [
-          25.4,
+          0,
           0,
           0,
           0,
@@ -2181,6 +2181,17 @@
     }
   ],
   "alerts": [
+    {
+      "id": "alt-1791159917852-85",
+      "deviceName": "Nouveau Périphérique (Périphérique Réseau Standard)",
+      "deviceIp": "192.168.100.8",
+      "severity": "notice",
+      "type": "new_device",
+      "title": "Nouveau équipement détecté sur le LAN",
+      "message": "Découverte de l'adresse IP 192.168.100.8 [MAC: B6:F6:1F:0F:54:75 - Périphérique Réseau Standard] sur le réseau local. En attente de validation.",
+      "status": "active",
+      "timestamp": "2026-10-05 00:25:16"
+    },
     {
       "id": "alt-1791159785795-67",
       "deviceName": "Nouveau Périphérique (Périphérique Réseau Standard)",
@@ -2481,6 +2492,18 @@
   ],
   "newDevices": [
     {
+      "id": "nd-1791159917852-59",
+      "ip": "192.168.100.8",
+      "mac": "B6:F6:1F:0F:54:75",
+      "vendor": "Périphérique Réseau Standard",
+      "hostname": "nouvel-hote-8",
+      "firstSeen": "2026-10-05 00:25:16",
+      "lastSeen": "À l’instant",
+      "status": "pending",
+      "suggestedType": "pc",
+      "siteId": "cotonou"
+    },
+    {
       "id": "nd-1791159785795-22",
       "ip": "192.168.100.79",
       "mac": "3E:0F:62:D8:4A:5D",
@@ -2710,6 +2733,15 @@
   ],
   "auditLogs": [
     {
+      "id": "log-1791159924427",
+      "timestamp": "2026-10-05 00:25:24",
+      "user": "Ing. Romaric (SuperAdmin)",
+      "action": "NETWORK_DISCOVERY_SCAN",
+      "target": "192.168.100.0/24",
+      "details": "Scan réel terminé avec succès. 6 hôte(s) actif(s) découvert(s) sur le réseau local.",
+      "severity": "info"
+    },
+    {
       "id": "log-1791159788892",
       "timestamp": "2026-10-05 00:23:08",
       "user": "Ing. Romaric (SuperAdmin)",
@@ -2821,5 +2853,5 @@
       "description": "Générer une alerte en cas de gigue ou de perte de paquets supérieure à 10% sur les liaisons inter-sites."
     }
   ],
-  "lastUpdated": "2026-10-05T00:23:53.812Z"
+  "lastUpdated": "2026-10-05T00:29:42.023Z"
 }

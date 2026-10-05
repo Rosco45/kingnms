@@ -102,34 +102,27 @@ export default function DiscoveryView({ onOpenAddDevice }: { onOpenAddDevice: ()
   const [importedIds, setImportedIds] = useState<string[]>(['disc-gw', 'disc-host']);
 
   const handleLaunchScan = async () => {
-    await startNetworkDiscovery(subnet, community);
-    // Fetch newly scanned results from backend
     try {
-      const res = await fetch('/api/discovery/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subnet, snmpCommunity: community })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.devices?.length) {
-          const mapped: DiscoveredHost[] = data.devices.map((d: any, idx: number) => ({
-            id: `disc-live-${idx}-${Date.now()}`,
-            ip: d.ip,
-            mac: d.mac,
-            hostname: d.hostname,
-            vendor: d.vendor,
-            type: d.type,
-            model: d.model,
-            os: d.os,
-            vlan: 10,
-            latencyMs: d.latencyMs,
-            snmpResponding: d.snmpResponding
-          }));
-          setDiscoveredResults(mapped);
-        }
+      const data = await startNetworkDiscovery(subnet, community);
+      if (data && data.devices && data.devices.length > 0) {
+        const mapped: DiscoveredHost[] = data.devices.map((d: any, idx: number) => ({
+          id: `disc-live-${idx}-${Date.now()}`,
+          ip: d.ip,
+          mac: d.mac,
+          hostname: d.hostname,
+          vendor: d.vendor,
+          type: d.type,
+          model: d.model,
+          os: d.os,
+          vlan: d.isGateway ? 10 : 20,
+          latencyMs: d.latencyMs,
+          snmpResponding: d.snmpResponding
+        }));
+        setDiscoveredResults(mapped);
       }
-    } catch {}
+    } catch (err) {
+      console.error('Scan error:', err);
+    }
   };
 
   const handleImport = (host: DiscoveredHost) => {
