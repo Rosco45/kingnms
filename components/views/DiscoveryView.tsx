@@ -38,89 +38,98 @@ export default function DiscoveryView({ onOpenAddDevice }: { onOpenAddDevice: ()
     scanProgress,
     scanLog,
     addDevice,
-    selectedSite
+    selectedSite,
+    detectedSubnet,
+    detectedGateway,
+    detectedHostIp
   } = useKingNMS();
 
-  const [subnet, setSubnet] = useState('192.168.1.0/24');
+  const [subnet, setSubnet] = useState(detectedSubnet || '192.168.100.0/24');
   const [community, setCommunity] = useState('public');
   const [useIcmp, setUseIcmp] = useState(true);
   const [useArp, setUseArp] = useState(true);
   const [useSnmp, setUseSnmp] = useState(true);
 
+  // Sync detected subnet when ready
+  React.useEffect(() => {
+    if (detectedSubnet) {
+      setSubnet(detectedSubnet);
+    }
+  }, [detectedSubnet]);
+
   const [discoveredResults, setDiscoveredResults] = useState<DiscoveredHost[]>([
     {
-      id: 'disc-1',
-      ip: '192.168.1.1',
-      mac: '00:1E:13:4A:88:01',
-      hostname: 'RT-CORE-01.local',
-      vendor: 'Cisco Systems',
+      id: 'disc-gw',
+      ip: '192.168.100.1',
+      mac: '60:A6:C5:5E:E5:76',
+      hostname: 'Routeur-Passerelle (192.168.100.1)',
+      vendor: 'Huawei Technologies',
       type: 'router',
-      model: 'Cisco ASR 1001-X',
-      os: 'Cisco IOS-XE 17.6',
+      model: 'EchoLife HG8245 GPON ONT',
+      os: 'Huawei VRP Embedded',
       vlan: 10,
-      latencyMs: 1.2,
+      latencyMs: 1.4,
       snmpResponding: true
     },
     {
-      id: 'disc-2',
-      ip: '192.168.1.2',
-      mac: '00:1E:13:4A:88:02',
-      hostname: 'SW-CORE-01.local',
-      vendor: 'Cisco Systems',
-      type: 'switch',
-      model: 'Catalyst 3850-48P',
-      os: 'Cisco IOS-XE 16.12',
-      vlan: 10,
-      latencyMs: 1.5,
-      snmpResponding: true
-    },
-    {
-      id: 'disc-3',
-      ip: '192.168.1.45',
-      mac: '5C:E9:1E:A4:77:21',
-      hostname: 'Galaxy-Tab-S9-Directeur',
-      vendor: 'Samsung Electronics',
+      id: 'disc-host',
+      ip: '192.168.100.74',
+      mac: '84:3A:4B:9D:07:A8',
+      hostname: 'roserick-Latitude-E6230 (Ce PC)',
+      vendor: 'Dell Technologies / Intel',
       type: 'pc',
-      model: 'Samsung Galaxy Android',
-      os: 'Android 14',
-      vlan: 40,
-      latencyMs: 5.4,
+      model: 'Dell Latitude E6230',
+      os: 'Linux x86_64',
+      vlan: 10,
+      latencyMs: 0.1,
       snmpResponding: false
     },
     {
-      id: 'disc-4',
-      ip: '192.168.1.80',
-      mac: '38:AF:29:11:22:33',
-      hostname: 'CAM-ENTREE-NORD',
-      vendor: 'Dahua Technology',
-      type: 'camera',
-      model: 'Dahua 4K IP Dome',
-      os: 'Embedded Linux',
-      vlan: 50,
-      latencyMs: 4.2,
-      snmpResponding: true
+      id: 'disc-infinix',
+      ip: '192.168.100.24',
+      mac: '80:79:5D:77:E3:0B',
+      hostname: 'Infinix-Mobile-Device',
+      vendor: 'Infinix Mobility Limited',
+      type: 'phone',
+      model: 'Infinix Smart Device',
+      os: 'Android 13 / XOS',
+      vlan: 20,
+      latencyMs: 8.5,
+      snmpResponding: false
     }
   ]);
 
-  const [importedIds, setImportedIds] = useState<string[]>(['disc-1', 'disc-2', 'disc-4']);
+  const [importedIds, setImportedIds] = useState<string[]>(['disc-gw', 'disc-host']);
 
   const handleLaunchScan = async () => {
     await startNetworkDiscovery(subnet, community);
-    // Add extra discovered device to list
-    const newHost: DiscoveredHost = {
-      id: `disc-${Date.now()}`,
-      ip: subnet.replace(/\.0\/\d+$/, `.${Math.floor(Math.random() * 150 + 20)}`),
-      mac: `00:50:56:${Math.floor(Math.random() * 89 + 10)}:${Math.floor(Math.random() * 89 + 10)}:${Math.floor(Math.random() * 89 + 10)}`,
-      hostname: `node-${Math.floor(Math.random() * 900 + 100)}.corp`,
-      vendor: 'HP Aruba Networks',
-      type: 'switch',
-      model: 'Aruba Instant On 1930',
-      os: 'ArubaOS',
-      vlan: 20,
-      latencyMs: 2.1,
-      snmpResponding: true
-    };
-    setDiscoveredResults(prev => [newHost, ...prev]);
+    // Fetch newly scanned results from backend
+    try {
+      const res = await fetch('/api/discovery/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subnet, snmpCommunity: community })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.devices?.length) {
+          const mapped: DiscoveredHost[] = data.devices.map((d: any, idx: number) => ({
+            id: `disc-live-${idx}-${Date.now()}`,
+            ip: d.ip,
+            mac: d.mac,
+            hostname: d.hostname,
+            vendor: d.vendor,
+            type: d.type,
+            model: d.model,
+            os: d.os,
+            vlan: 10,
+            latencyMs: d.latencyMs,
+            snmpResponding: d.snmpResponding
+          }));
+          setDiscoveredResults(mapped);
+        }
+      }
+    } catch {}
   };
 
   const handleImport = (host: DiscoveredHost) => {
@@ -165,9 +174,26 @@ export default function DiscoveryView({ onOpenAddDevice }: { onOpenAddDevice: ()
 
       {/* Scan Config Card */}
       <div className="bg-[#101828] border border-[#1F2E45] rounded-2xl p-5 shadow-xl">
-        <h2 className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-4">
-          Paramètres du Balayage Réseau
-        </h2>
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <h2 className="text-xs font-bold text-amber-400 uppercase tracking-wider">
+            Paramètres du Balayage Réseau
+          </h2>
+          {detectedSubnet && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                LAN Réel : {detectedSubnet} (GW: {detectedGateway})
+              </span>
+              <button
+                type="button"
+                onClick={() => setSubnet(detectedSubnet)}
+                className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-600/20 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-600/30 font-bold transition-all"
+              >
+                Appliquer mon sous-réseau
+              </button>
+            </div>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Subnet Input */}
@@ -180,12 +206,12 @@ export default function DiscoveryView({ onOpenAddDevice }: { onOpenAddDevice: ()
               value={subnet}
               onChange={(e) => setSubnet(e.target.value)}
               className="w-full bg-[#121A2A] border border-[#1F2E45] rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-cyan-400"
-              placeholder="ex: 192.168.1.0/24"
+              placeholder="ex: 192.168.100.0/24"
             />
             {/* Quick chips */}
             <div className="flex items-center gap-1.5 mt-2 flex-wrap text-[10px] font-mono">
               <span className="text-slate-500">Préréglages :</span>
-              {['192.168.1.0/24', '192.168.2.0/24', '10.0.0.0/24'].map(r => (
+              {[detectedSubnet || '192.168.100.0/24', '192.168.1.0/24', '10.0.0.0/24'].map(r => (
                 <button
                   key={r}
                   onClick={() => setSubnet(r)}

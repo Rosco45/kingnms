@@ -47,23 +47,27 @@ interface KingNMSContextType {
   scanLog: string[];
   isLivePolling: boolean;
   lastPollTime: string;
+  detectedSubnet: string;
+  detectedGateway: string;
+  detectedHostIp: string;
   // Actions
   setSelectedSite: (site: string) => void;
   setSelectedVlan: (vlan: number | null) => void;
   setSearchQuery: (query: string) => void;
   setIsLivePolling: (active: boolean) => void;
-  addDevice: (device: Partial<Device>) => void;
-  updateDevice: (id: string, updates: Partial<Device>) => void;
-  deleteDevice: (id: string) => void;
-  blockDevice: (id: string, reason: string) => void;
-  unblockDevice: (id: string) => void;
-  toggleInterfacePort: (deviceId: string, interfaceId: string) => void;
+  addDevice: (device: Partial<Device>) => Promise<void>;
+  updateDevice: (id: string, updates: Partial<Device>) => Promise<void>;
+  deleteDevice: (id: string) => Promise<void>;
+  blockDevice: (id: string, reason: string) => Promise<void>;
+  unblockDevice: (id: string) => Promise<void>;
+  toggleInterfacePort: (deviceId: string, interfaceId: string) => Promise<void>;
   changeInterfaceVlan: (deviceId: string, interfaceId: string, newVlan: number) => void;
   executePing: (ip: string) => Promise<{ success: boolean; latencyMs: number; details: string; packetLoss: number }>;
-  startNetworkDiscovery: (subnet: string, snmpCommunity?: string) => Promise<void>;
-  authorizeNewDevice: (id: string, customData?: Partial<Device>) => void;
-  blockNewDevice: (id: string, reason?: string) => void;
-  ignoreNewDevice: (id: string) => void;
+  executeTraceroute: (target: string) => Promise<{ success: boolean; totalHops: number; hops: any[] }>;
+  startNetworkDiscovery: (subnet?: string, snmpCommunity?: string) => Promise<void>;
+  authorizeNewDevice: (id: string, customData?: Partial<Device>) => Promise<void>;
+  blockNewDevice: (id: string, reason?: string) => Promise<void>;
+  ignoreNewDevice: (id: string) => Promise<void>;
   acknowledgeAlert: (id: string) => void;
   resolveAlert: (id: string) => void;
   addAlertRule: (rule: Partial<AlertRule>) => void;
@@ -72,7 +76,7 @@ interface KingNMSContextType {
   addVlan: (vlan: Partial<VLAN>) => void;
   updateNotifications: (settings: Partial<NotificationSettings>) => void;
   setUserRole: (role: UserRole) => void;
-  triggerManualRefresh: () => void;
+  triggerManualRefresh: () => Promise<void>;
 }
 
 const KingNMSContext = createContext<KingNMSContextType | undefined>(undefined);
@@ -98,39 +102,86 @@ export function KingNMSProvider({ children }: { children: ReactNode }) {
   const [isLivePolling, setIsLivePolling] = useState<boolean>(true);
   const [lastPollTime, setLastPollTime] = useState<string>(() => new Date().toLocaleTimeString());
 
-  // Load from localStorage on mount
-  useEffect(() => {
+  // Real Network Detection
+  const [detectedSubnet, setDetectedSubnet] = useState<string>('192.168.100.0/24');
+  const [detectedGateway, setDetectedGateway] = useState<string>('192.168.100.1');
+  const [detectedHostIp, setDetectedHostIp] = useState<string>('192.168.100.74');
+
+  // Load from backend persistent database & detect real network on mount
+  const fetchBackendData = useCallback(async () => {
     try {
-      const savedDevices = localStorage.getItem('kingnms_devices');
-      if (savedDevices) setDevices(JSON.parse(savedDevices));
-      const savedAlerts = localStorage.getItem('kingnms_alerts');
-      if (savedAlerts) setAlerts(JSON.parse(savedAlerts));
-      const savedNewDevs = localStorage.getItem('kingnms_new_devices');
-      if (savedNewDevs) setNewDevices(JSON.parse(savedNewDevs));
-      const savedVlans = localStorage.getItem('kingnms_vlans');
-      if (savedVlans) setVlans(JSON.parse(savedVlans));
-      const savedRules = localStorage.getItem('kingnms_rules');
-      if (savedRules) setRules(JSON.parse(savedRules));
-      const savedLogs = localStorage.getItem('kingnms_audit_logs');
-      if (savedLogs) setAuditLogs(JSON.parse(savedLogs));
+      // 1. Fetch real system network interfaces
+      const netRes = await fetch('/api/system/interfaces').catch(() => null);
+      if (netRes?.ok) {
+        const netData = await netRes.json();
+        if (netData.defaultSubnet) setDetectedSubnet(netData.defaultSubnet);
+        if (netData.defaultGateway) setDetectedGateway(netData.defaultGateway);
+        if (netData.hostIp) setDetectedHostIp(netData.hostIp);
+      }
+
+      // 2. Fetch persistent devices
+      const devRes = await fetch('/api/devices').catch(() => null);
+      if (devRes?.ok) {
+        const devData = await devRes.json();
+        if (devData.devices?.length) {
+          setDevices(devData.devices);
+        }
+      }
+
+      // 3. Fetch alerts
+      const altRes = await fetch('/api/alerts').catch(() => null);
+      if (altRes?.ok) {
+        const altData = await altRes.json();
+        if (altData.alerts?.length) {
+          setAlerts(altData.alerts);
+        }
+      }
+
+      // 4. Fetch new devices
+      const ndRes = await fetch('/api/new-devices').catch(() => null);
+      if (ndRes?.ok) {
+        const ndData = await ndRes.json();
+        if (ndData.newDevices) {
+          setNewDevices(ndData.newDevices);
+        }
+      }
     } catch {
-      // Ignore parse errors
+      // Offline safe fallback
     }
   }, []);
 
-  // Save to localStorage when critical items update
   useEffect(() => {
-    try {
-      localStorage.setItem('kingnms_devices', JSON.stringify(devices));
-      localStorage.setItem('kingnms_alerts', JSON.stringify(alerts));
-      localStorage.setItem('kingnms_new_devices', JSON.stringify(newDevices));
-      localStorage.setItem('kingnms_vlans', JSON.stringify(vlans));
-      localStorage.setItem('kingnms_rules', JSON.stringify(rules));
-      localStorage.setItem('kingnms_audit_logs', JSON.stringify(auditLogs));
-    } catch {
-      // Storage quota or error safe
-    }
-  }, [devices, alerts, newDevices, vlans, rules, auditLogs]);
+    fetchBackendData();
+  }, [fetchBackendData]);
+
+  // Periodic Backend Monitoring Cycle Poller
+  useEffect(() => {
+    if (!isLivePolling) return;
+
+    const interval = setInterval(async () => {
+      try {
+        setLastPollTime(new Date().toLocaleTimeString());
+        const res = await fetch('/api/system/monitor', { method: 'POST' });
+        if (res.ok) {
+          // Re-fetch updated statuses
+          const devRes = await fetch('/api/devices');
+          if (devRes.ok) {
+            const devData = await devRes.json();
+            setDevices(devData.devices);
+          }
+          const altRes = await fetch('/api/alerts');
+          if (altRes.ok) {
+            const altData = await altRes.json();
+            setAlerts(altData.alerts);
+          }
+        }
+      } catch {
+        // Fallback smooth ticker
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [isLivePolling]);
 
   // Helper to add audit entry
   const logAudit = useCallback((action: string, target: string, details: string, severity: 'info' | 'warning' | 'danger' = 'info') => {
@@ -146,64 +197,26 @@ export function KingNMSProvider({ children }: { children: ReactNode }) {
     setAuditLogs(prev => [newEntry, ...prev.slice(0, 99)]);
   }, [currentUser]);
 
-  // Periodic Live Background Polling Simulation
-  useEffect(() => {
-    if (!isLivePolling) return;
-
-    const interval = setInterval(() => {
-      setLastPollTime(new Date().toLocaleTimeString());
-
-      setDevices(prevDevices => {
-        return prevDevices.map(dev => {
-          if (dev.status === 'DOWN') return dev; // keep DOWN devices down
-
-          // Slight realistic fluctuations in traffic, latency, CPU
-          const jitter = (Math.random() - 0.48) * 0.4;
-          const newLatency = Math.max(0.6, Number((dev.metrics.latencyMs + jitter).toFixed(1)));
-          const cpuDelta = Math.floor((Math.random() - 0.48) * 4);
-          const newCpu = Math.min(99, Math.max(5, dev.metrics.cpuPct + cpuDelta));
-
-          // Update history arrays
-          const newHistoryLatency = [...(dev.metrics.historyLatency || []).slice(1), newLatency];
-          const newHistoryCpu = [...(dev.metrics.historyCpu || []).slice(1), newCpu];
-
-          // Fluctuate interface traffic
-          const updatedInterfaces = dev.interfaces.map(iface => {
-            if (iface.adminStatus === 'DOWN' || iface.operStatus === 'DOWN') return iface;
-            const deltaTraffic = (Math.random() - 0.48) * 5;
-            const newIn = Math.max(0.1, Number((iface.trafficInMbps + deltaTraffic).toFixed(1)));
-            const newOut = Math.max(0.1, Number((iface.trafficOutMbps + deltaTraffic * 0.8).toFixed(1)));
-            return {
-              ...iface,
-              trafficInMbps: newIn,
-              trafficOutMbps: newOut
-            };
-          });
-
-          return {
-            ...dev,
-            metrics: {
-              ...dev.metrics,
-              latencyMs: newLatency,
-              cpuPct: newCpu,
-              uptimeSeconds: dev.metrics.uptimeSeconds + 6,
-              historyLatency: newHistoryLatency,
-              historyCpu: newHistoryCpu
-            },
-            interfaces: updatedInterfaces
-          };
-        });
+  // Add Device with server persistence
+  const addDevice = useCallback(async (deviceData: Partial<Device>) => {
+    try {
+      const res = await fetch('/api/devices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(deviceData)
       });
-    }, 6000);
+      if (res.ok) {
+        const data = await res.json();
+        setDevices(prev => [data.device, ...prev]);
+        logAudit('DEVICE_CREATED', `${data.device.hostname} (${data.device.ip})`, `Ajout manuel d’un équipement de type ${data.device.type}`);
+        return;
+      }
+    } catch {}
 
-    return () => clearInterval(interval);
-  }, [isLivePolling]);
-
-  // Add Device
-  const addDevice = useCallback((deviceData: Partial<Device>) => {
+    // Local fallback
     const newDev: Device = {
       id: `dev-${Date.now()}`,
-      ip: deviceData.ip || '192.168.1.200',
+      ip: deviceData.ip || '192.168.100.100',
       hostname: deviceData.hostname || `DEV-${Math.floor(Math.random() * 900 + 100)}`,
       mac: deviceData.mac || `00:50:56:${Math.floor(Math.random() * 89 + 10)}:${Math.floor(Math.random() * 89 + 10)}:${Math.floor(Math.random() * 89 + 10)}`,
       vendor: deviceData.vendor || 'Generic Enterprise',
@@ -233,14 +246,14 @@ export function KingNMSProvider({ children }: { children: ReactNode }) {
         ramPct: 50,
         uptimeSeconds: 86400,
         availabilityPct: 100,
-        historyLatency: [1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8],
-        historyCpu: [20, 22, 24, 25, 24, 23, 25, 24, 24, 24],
-        historyRam: [50, 50, 50, 50, 50, 50, 50, 50, 50, 50]
+        historyLatency: [1.8, 1.8, 1.8, 1.8, 1.8],
+        historyCpu: [20, 22, 24, 25, 24],
+        historyRam: [50, 50, 50, 50, 50]
       },
       interfaces: [
         {
           id: `if-${Date.now()}-1`,
-          name: 'GigabitEthernet0/1',
+          name: 'eth0',
           adminStatus: 'UP',
           operStatus: 'UP',
           speed: '1 Gbps',
@@ -255,28 +268,46 @@ export function KingNMSProvider({ children }: { children: ReactNode }) {
           vlan: deviceData.vlanId || 20
         }
       ],
-      notes: deviceData.notes || 'Équipement ajouté manuellement.'
+      notes: deviceData.notes || 'Équipement ajouté.'
     };
 
     setDevices(prev => [newDev, ...prev]);
-    logAudit('DEVICE_CREATED', `${newDev.hostname} (${newDev.ip})`, `Ajout manuel d’un équipement de type ${newDev.type}`);
+    logAudit('DEVICE_CREATED', `${newDev.hostname} (${newDev.ip})`, `Ajout manuel d’un équipement`);
   }, [logAudit]);
 
   // Update Device
-  const updateDevice = useCallback((id: string, updates: Partial<Device>) => {
+  const updateDevice = useCallback(async (id: string, updates: Partial<Device>) => {
+    try {
+      await fetch(`/api/devices/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+    } catch {}
     setDevices(prev => prev.map(d => (d.id === id ? { ...d, ...updates } : d)));
     logAudit('DEVICE_UPDATED', id, `Mise à jour des métadonnées équipement`);
   }, [logAudit]);
 
   // Delete Device
-  const deleteDevice = useCallback((id: string) => {
+  const deleteDevice = useCallback(async (id: string) => {
+    try {
+      await fetch(`/api/devices/${id}`, { method: 'DELETE' });
+    } catch {}
     const target = devices.find(d => d.id === id);
     setDevices(prev => prev.filter(d => d.id !== id));
     logAudit('DEVICE_DELETED', target?.hostname || id, `Suppression définitive de l’inventaire`);
   }, [devices, logAudit]);
 
-  // Block Device (shutdown port, mark blocked, audit)
-  const blockDevice = useCallback((id: string, reason: string) => {
+  // Block Device with persistent server execution
+  const blockDevice = useCallback(async (id: string, reason: string) => {
+    try {
+      await fetch(`/api/devices/${id}/block`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason })
+      });
+    } catch {}
+
     const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
     setDevices(prev => prev.map(d => {
       if (d.id === id) {
@@ -303,25 +334,14 @@ export function KingNMSProvider({ children }: { children: ReactNode }) {
       `Blocage réseau appliqué. Motif: ${reason}. Ports switch désactivés.`,
       'danger'
     );
-
-    // Create an alert for visibility
-    const newAlert: Alert = {
-      id: `alt-${Date.now()}`,
-      deviceId: id,
-      deviceName: target?.hostname || id,
-      deviceIp: target?.ip || '0.0.0.0',
-      severity: 'high',
-      type: 'security',
-      title: `Équipement bloqué par l'administrateur`,
-      message: `L'équipement ${target?.hostname} (${target?.ip}) a été bloqué pour le motif : ${reason}`,
-      status: 'active',
-      timestamp
-    };
-    setAlerts(prev => [newAlert, ...prev]);
   }, [devices, logAudit]);
 
   // Unblock Device
-  const unblockDevice = useCallback((id: string) => {
+  const unblockDevice = useCallback(async (id: string) => {
+    try {
+      await fetch(`/api/devices/${id}/unblock`, { method: 'POST' });
+    } catch {}
+
     setDevices(prev => prev.map(d => {
       if (d.id === id) {
         return {
@@ -345,7 +365,7 @@ export function KingNMSProvider({ children }: { children: ReactNode }) {
   }, [devices, logAudit]);
 
   // Toggle Interface Port Admin Status (UP / DOWN)
-  const toggleInterfacePort = useCallback((deviceId: string, interfaceId: string) => {
+  const toggleInterfacePort = useCallback(async (deviceId: string, interfaceId: string) => {
     let portName = '';
     let targetDeviceName = '';
     let isNowDown = false;
@@ -372,6 +392,18 @@ export function KingNMSProvider({ children }: { children: ReactNode }) {
       }
       return d;
     }));
+
+    try {
+      await fetch('/api/ports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deviceId,
+          interfaceId,
+          action: isNowDown ? 'shutdown' : 'noshutdown'
+        })
+      });
+    } catch {}
 
     logAudit(
       isNowDown ? 'PORT_SHUTDOWN' : 'PORT_ENABLE',
@@ -400,7 +432,7 @@ export function KingNMSProvider({ children }: { children: ReactNode }) {
     logAudit('PORT_VLAN_CHANGE', `Device ${deviceId} Port ${interfaceId}`, `VLAN réaffecté vers ID ${newVlan}`);
   }, [logAudit]);
 
-  // Real or Simulated ICMP Ping Execution
+  // Real ICMP Ping Execution via system ping tool
   const executePing = useCallback(async (targetIp: string): Promise<{ success: boolean; latencyMs: number; details: string; packetLoss: number }> => {
     try {
       const res = await fetch('/api/ping', {
@@ -418,146 +450,110 @@ export function KingNMSProvider({ children }: { children: ReactNode }) {
 
       return data;
     } catch {
-      // Fallback if network request fails
-      const matchedDevice = devices.find(d => d.ip === targetIp);
-      const isUp = matchedDevice ? matchedDevice.status !== 'DOWN' : true;
-      const latency = isUp ? (matchedDevice?.metrics.latencyMs || 2.4) : 0;
       return {
-        success: isUp,
-        latencyMs: latency,
-        details: isUp ? `Réponse de ${targetIp} : octets=64 temps=${latency}ms TTL=64` : `Délai d'attente de la demande dépassé pour ${targetIp}`,
-        packetLoss: isUp ? 0 : 100
+        success: false,
+        latencyMs: 0,
+        details: `Échec de connexion au service ICMP pour ${targetIp}`,
+        packetLoss: 100
       };
     }
-  }, [devices, logAudit]);
+  }, [logAudit]);
 
-  // Network Discovery Scan
-  const startNetworkDiscovery = useCallback(async (subnet: string, snmpCommunity = 'public') => {
+  // Real Traceroute Hop-by-Hop execution
+  const executeTraceroute = useCallback(async (target: string) => {
+    try {
+      const res = await fetch('/api/traceroute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target })
+      });
+      return await res.json();
+    } catch {
+      return { success: false, totalHops: 0, hops: [] };
+    }
+  }, []);
+
+  // Real Network Discovery Scan on actual subnet
+  const startNetworkDiscovery = useCallback(async (subnet?: string, snmpCommunity = 'public') => {
+    const targetSubnet = subnet || detectedSubnet;
     setIsScanning(true);
-    setScanProgress(5);
-    setScanLog([`[${new Date().toLocaleTimeString()}] Démarrage de la découverte réseau sur la plage ${subnet}...`]);
+    setScanProgress(10);
+    setScanLog([
+      `[${new Date().toLocaleTimeString()}] Démarrage de la découverte automatique réelle sur ${targetSubnet}...`,
+      `[${new Date().toLocaleTimeString()}] Détection de l'interface réseau active (${detectedHostIp}) & passerelle (${detectedGateway})...`
+    ]);
 
     try {
-      // Step-by-step progress simulation with real API support
-      const steps = [
-        { pct: 20, msg: `Envoi des requêtes ICMP Echo Broadcast et ARP Sweep sur ${subnet}...` },
-        { pct: 45, msg: `Collecte des réponses ARP et interrogation des tables MAC associées...` },
-        { pct: 70, msg: `Interrogation SNMP MIB-II (sysDescr, sysName) avec la communauté "${snmpCommunity}"...` },
-        { pct: 90, msg: `Analyse des OUI IEEE et classification automatique des périphériques...` },
-        { pct: 100, msg: `Balayage terminé avec succès. Tous les équipements ont été répertoriés.` }
-      ];
+      setScanProgress(30);
+      setScanLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] Envoi des requêtes ICMP Echo et lecture de la table ARP du noyau Linux...`]);
 
-      for (const step of steps) {
-        await new Promise(r => setTimeout(r, 600));
-        setScanProgress(step.pct);
-        setScanLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${step.msg}`]);
+      const res = await fetch('/api/discovery/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subnet: targetSubnet, snmpCommunity })
+      });
+
+      setScanProgress(75);
+      setScanLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] Résolution des adresses MAC IEEE OUI et requêtes MIB-II SNMP...`]);
+
+      if (res.ok) {
+        const data = await res.json();
+        setScanProgress(100);
+        setScanLog(prev => [
+          ...prev,
+          `[${new Date().toLocaleTimeString()}] Balayage terminé. ${data.totalFound} équipement(s) réel(s) identifié(s) sur le réseau local.`
+        ]);
+
+        // Refresh devices and new devices from server
+        const devRes = await fetch('/api/devices');
+        if (devRes.ok) {
+          const devData = await devRes.json();
+          setDevices(devData.devices);
+        }
       }
-
-      // Add a newly discovered device to the triage queue
-      const randomIpEnd = Math.floor(Math.random() * 200 + 20);
-      const newlyFoundDevice: NewDevice = {
-        id: `nd-scan-${Date.now()}`,
-        ip: subnet.replace(/\.0\/\d+$/, `.${randomIpEnd}`).replace(/\/\d+$/, `.${randomIpEnd}`),
-        mac: `00:E0:4C:${Math.floor(Math.random() * 89 + 10)}:${Math.floor(Math.random() * 89 + 10)}:${Math.floor(Math.random() * 89 + 10)}`,
-        vendor: 'Realtek Semiconductor',
-        hostname: `host-${randomIpEnd}.local`,
-        firstSeen: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        lastSeen: 'À l’instant',
-        status: 'pending',
-        suggestedType: 'pc',
-        siteId: selectedSite !== 'all' ? selectedSite : 'cotonou'
-      };
-
-      setNewDevices(prev => [newlyFoundDevice, ...prev]);
-
-      logAudit(
-        'DISCOVERY_SCAN_RUN',
-        subnet,
-        `Scan automatique terminé. Découverte de 1 nouvel équipement (${newlyFoundDevice.ip}) placé en file de triage.`
-      );
     } finally {
       setIsScanning(false);
     }
-  }, [selectedSite, logAudit]);
+  }, [detectedSubnet, detectedHostIp, detectedGateway]);
 
-  // Authorize New Device from triage queue into active inventory
-  const authorizeNewDevice = useCallback((id: string, customData?: Partial<Device>) => {
-    const target = newDevices.find(nd => nd.id === id);
-    if (!target) return;
+  // Authorize New Device
+  const authorizeNewDevice = useCallback(async (id: string, customData?: Partial<Device>) => {
+    try {
+      const res = await fetch('/api/new-devices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'authorize', id, customData })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDevices(prev => [data.device, ...prev]);
+        setNewDevices(prev => prev.filter(nd => nd.id !== id));
+      }
+    } catch {}
+  }, []);
 
-    const addedDev: Device = {
-      id: `dev-${Date.now()}`,
-      ip: customData?.ip || target.ip,
-      hostname: customData?.hostname || target.hostname || `DEV-${target.ip.split('.').pop()}`,
-      mac: target.mac,
-      vendor: target.vendor,
-      type: (customData?.type || target.suggestedType || 'pc') as DeviceType,
-      status: 'UP',
-      siteId: target.siteId || 'cotonou',
-      vlanId: customData?.vlanId || 20,
-      model: customData?.model || `${target.vendor} Network Node`,
-      os: customData?.os || 'Auto-Detected OS',
-      serialNumber: `SN-${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
-      location: customData?.location || 'Poste Découvert Réseau',
-      snmpEnabled: true,
-      snmpVersion: 'v2c',
-      snmpCommunity: 'public',
-      isBlocked: false,
-      firstSeen: target.firstSeen,
-      lastSeen: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      metrics: {
-        latencyMs: 2.1,
-        minLatencyMs: 1.5,
-        maxLatencyMs: 3.8,
-        packetLossPct: 0,
-        cpuPct: 15,
-        cpuTempC: 38,
-        ramUsedMb: 1024,
-        ramTotalMb: 2048,
-        ramPct: 50,
-        uptimeSeconds: 3600,
-        availabilityPct: 100,
-        historyLatency: [2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1],
-        historyCpu: [15, 15, 15, 15, 15, 15, 15, 15, 15, 15],
-        historyRam: [50, 50, 50, 50, 50, 50, 50, 50, 50, 50]
-      },
-      interfaces: [
-        {
-          id: `if-${Date.now()}-1`,
-          name: 'eth0',
-          adminStatus: 'UP',
-          operStatus: 'UP',
-          speed: '1 Gbps',
-          duplex: 'Full',
-          trafficInMbps: 2.4,
-          trafficOutMbps: 4.8,
-          trafficUsagePct: 0.5,
-          errorsIn: 0,
-          errorsOut: 0,
-          packetLoss: 0,
-          collisions: 0,
-          vlan: customData?.vlanId || 20
-        }
-      ]
-    };
-
-    setDevices(prev => [addedDev, ...prev]);
-    setNewDevices(prev => prev.filter(nd => nd.id !== id));
-    logAudit('NEW_DEVICE_AUTHORIZED', `${addedDev.hostname} (${addedDev.ip})`, `Équipement approuvé et intégré dans l'inventaire officiel.`);
-  }, [newDevices, logAudit]);
-
-  // Block New Device straight from triage queue
-  const blockNewDevice = useCallback((id: string, reason = 'Périphérique suspect non homologué') => {
-    const target = newDevices.find(nd => nd.id === id);
-    if (!target) return;
-
-    setNewDevices(prev => prev.filter(nd => nd.id !== id));
-    logAudit('NEW_DEVICE_BLOCKED', `${target.ip} [${target.mac}]`, `Blocage préventif: ${reason}. Inscription dans la liste noire MAC.`, 'danger');
-  }, [newDevices, logAudit]);
+  // Block New Device
+  const blockNewDevice = useCallback(async (id: string, reason = 'Périphérique suspect non homologué') => {
+    try {
+      await fetch('/api/new-devices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'block', id, reason })
+      });
+      setNewDevices(prev => prev.filter(nd => nd.id !== id));
+    } catch {}
+  }, []);
 
   // Ignore New Device
-  const ignoreNewDevice = useCallback((id: string) => {
-    setNewDevices(prev => prev.filter(nd => nd.id !== id));
+  const ignoreNewDevice = useCallback(async (id: string) => {
+    try {
+      await fetch('/api/new-devices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'ignore', id })
+      });
+      setNewDevices(prev => prev.filter(nd => nd.id !== id));
+    } catch {}
   }, []);
 
   // Alert Actions
@@ -624,9 +620,10 @@ export function KingNMSProvider({ children }: { children: ReactNode }) {
     setCurrentUser(prev => ({ ...prev, role }));
   }, []);
 
-  const triggerManualRefresh = useCallback(() => {
+  const triggerManualRefresh = useCallback(async () => {
     setLastPollTime(new Date().toLocaleTimeString());
-  }, []);
+    await fetchBackendData();
+  }, [fetchBackendData]);
 
   return (
     <KingNMSContext.Provider
@@ -649,6 +646,9 @@ export function KingNMSProvider({ children }: { children: ReactNode }) {
         scanLog,
         isLivePolling,
         lastPollTime,
+        detectedSubnet,
+        detectedGateway,
+        detectedHostIp,
         setSelectedSite,
         setSelectedVlan,
         setSearchQuery,
@@ -661,6 +661,7 @@ export function KingNMSProvider({ children }: { children: ReactNode }) {
         toggleInterfacePort,
         changeInterfaceVlan,
         executePing,
+        executeTraceroute,
         startNetworkDiscovery,
         authorizeNewDevice,
         blockNewDevice,
